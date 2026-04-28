@@ -44,4 +44,18 @@ model Donation {
   status           DonationStatus @default(DRAFT)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+  documents        DonationDocument[]
+}
+
+model DonationDocument {
+  id           String   @id @default(cuid())
+  donationId   String
+  donation     Donation @relation(fields: [donationId], references: [id], onDelete: Cascade)
+  fileName     String
+  contentType  String
+  sizeBytes    Int
+  objectKey    String   @unique
+  createdAt    DateTime @default(now())
+
+  @@index([donationId])
 }
