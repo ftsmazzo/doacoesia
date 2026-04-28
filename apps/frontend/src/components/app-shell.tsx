@@ -9,7 +9,7 @@ type Props = {
 
 export function AppShell({ children, title, subtitle }: Props) {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-x-hidden">
       <header className="sticky top-0 z-20 border-b border-slate-800/80 bg-slate-950/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-3 sm:px-6">
           <div className="flex items-center justify-between gap-3">
@@ -31,11 +31,11 @@ export function AppShell({ children, title, subtitle }: Props) {
 
       <main className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-4 sm:px-6 sm:py-6">
         <section className="rounded-2xl border border-slate-800 bg-gradient-to-br from-cyan-500/10 via-slate-900 to-slate-900 p-4 sm:p-6">
-          <h1 className="text-2xl font-bold leading-tight text-white sm:text-4xl">
+          <h1 className="break-words text-2xl font-bold leading-tight text-white sm:text-4xl">
             {title}
           </h1>
           {subtitle ? (
-            <p className="mt-2 max-w-3xl text-sm text-slate-300 sm:text-base">
+            <p className="mt-2 max-w-3xl break-words text-sm text-slate-300 sm:text-base">
               {subtitle}
             </p>
           ) : null}

@@ -62,17 +62,17 @@ export default function DoacoesPage() {
       ) : null}
 
       <section className="rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-base font-semibold text-white">Fila de doações</h2>
-          <div className="flex flex-wrap gap-2">
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilter)} className="rounded-lg border border-slate-700 bg-slate-800 px-2 py-1.5 text-xs text-slate-100">
+          <div className="grid gap-2 sm:flex sm:flex-wrap">
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilter)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-2 py-2 text-xs text-slate-100 sm:w-auto sm:py-1.5">
               {statusOptions.map((status) => (
                 <option key={status} value={status}>
                   {status === "ALL" ? "Todos os status" : donationStatusLabels[status] ?? status}
                 </option>
               ))}
             </select>
-            <select value={axisFilter} onChange={(e) => setAxisFilter(e.target.value)} className="rounded-lg border border-slate-700 bg-slate-800 px-2 py-1.5 text-xs text-slate-100">
+            <select value={axisFilter} onChange={(e) => setAxisFilter(e.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-2 py-2 text-xs text-slate-100 sm:w-auto sm:py-1.5">
               <option value="">Todos os eixos</option>
               {axisOptions.map((axis) => (
                 <option key={axis} value={axis}>
@@ -80,13 +80,30 @@ export default function DoacoesPage() {
                 </option>
               ))}
             </select>
-            <button onClick={() => void fetchDonations(1)} className="rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-600">
+            <button onClick={() => void fetchDonations(1)} className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-medium text-white hover:bg-slate-600 sm:py-1.5">
               Filtrar
             </button>
           </div>
         </div>
 
-        <div className="mt-3 overflow-x-auto">
+        <div className="mt-4 grid gap-2 sm:hidden">
+          {donations.map((item) => (
+            <article key={item.id} className="rounded-xl border border-slate-800 bg-slate-800/50 p-3">
+              <p className="break-words text-sm font-semibold text-white">{item.title}</p>
+              <p className="mt-1 break-words text-xs text-slate-300">{item.targetAxis}</p>
+              <p className="mt-1 break-words text-xs text-slate-400">{item.donor.name}</p>
+              <p className="mt-2 text-xs text-cyan-300">
+                {donationStatusLabels[item.status] ?? item.status}
+              </p>
+              <Link className="mt-2 inline-block text-xs text-cyan-300 underline" href={`/doacoes/${item.id}`}>
+                Ver detalhes
+              </Link>
+            </article>
+          ))}
+          {donations.length === 0 ? <p className="text-sm text-slate-400">Nenhuma doacao encontrada.</p> : null}
+        </div>
+
+        <div className="mt-3 hidden overflow-x-auto sm:block">
           <table className="w-full min-w-[720px] border-collapse text-sm">
             <thead>
               <tr className="text-left text-slate-400">
@@ -117,9 +134,9 @@ export default function DoacoesPage() {
           </table>
         </div>
 
-        <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
+        <div className="mt-4 flex flex-col gap-2 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between">
           <span>{meta.total} registros</span>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button disabled={meta.page <= 1} onClick={() => void fetchDonations(meta.page - 1)} className="rounded border border-slate-700 px-2 py-1 disabled:opacity-40">
               Anterior
             </button>

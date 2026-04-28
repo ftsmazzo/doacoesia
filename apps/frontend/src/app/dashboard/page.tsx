@@ -56,25 +56,25 @@ export default function DashboardPage() {
       ) : null}
 
       <section className="grid gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <article className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <article className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900 p-4">
           <h2 className="text-sm font-semibold text-white">Recebidas</h2>
           <p className="mt-3 text-sm text-slate-300">
             {summary.status.received} propostas recebidas
           </p>
         </article>
-        <article className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <article className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900 p-4">
           <h2 className="text-sm font-semibold text-white">Em análise</h2>
           <p className="mt-3 text-sm text-slate-300">
             {summary.status.underReview} propostas em análise
           </p>
         </article>
-        <article className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <article className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900 p-4">
           <h2 className="text-sm font-semibold text-white">Aprovadas</h2>
           <p className="mt-3 text-sm text-slate-300">
             {summary.status.approved} propostas aprovadas
           </p>
         </article>
-        <article className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <article className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900 p-4">
           <h2 className="text-sm font-semibold text-white">Rejeitadas</h2>
           <p className="mt-3 text-sm text-slate-300">
             {summary.status.rejected} propostas rejeitadas
@@ -84,7 +84,20 @@ export default function DashboardPage() {
 
       <section className="rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-5">
         <h2 className="text-base font-semibold text-white">Status por eixo de atendimento</h2>
-        <div className="mt-3 overflow-x-auto">
+        <div className="mt-3 grid gap-2 sm:hidden">
+          {summary.axis.map((axisRow) => (
+            <article key={axisRow.axis} className="rounded-xl border border-slate-800 bg-slate-800/50 p-3">
+              <p className="break-words text-sm font-medium text-white">{axisRow.axis}</p>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-300">
+                <p>Recebidas: {axisRow.received}</p>
+                <p>Em analise: {axisRow.underReview}</p>
+                <p>Aprovadas: {axisRow.approved}</p>
+                <p>Rejeitadas: {axisRow.rejected}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+        <div className="mt-3 hidden overflow-x-auto sm:block">
           <table className="w-full min-w-[760px] border-collapse text-sm">
             <thead>
               <tr className="text-left text-slate-400">
@@ -115,9 +128,9 @@ export default function DashboardPage() {
         <div className="mt-3 grid gap-3 sm:hidden">
           {latest.map((item) => (
             <article key={item.id} className="rounded-xl border border-slate-800 bg-slate-800/50 p-3">
-              <p className="text-sm font-medium text-white">{item.title}</p>
-              <p className="mt-1 text-xs text-slate-300">{item.targetAxis}</p>
-              <p className="text-xs text-slate-400">{item.donor.name}</p>
+              <p className="break-words text-sm font-medium text-white">{item.title}</p>
+              <p className="mt-1 break-words text-xs text-slate-300">{item.targetAxis}</p>
+              <p className="break-words text-xs text-slate-400">{item.donor.name}</p>
               <p className="mt-1 text-xs text-cyan-300">
                 {donationStatusLabels[item.status] ?? item.status}
               </p>
