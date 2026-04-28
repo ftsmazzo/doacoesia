@@ -15,8 +15,11 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('should return health payload', () => {
+      const response = appController.getHealth();
+      expect(response.service).toBe('doacoesia-backend');
+      expect(response.status).toBe('ok');
+      expect(response.timestamp).toEqual(expect.any(String));
     });
   });
 });
