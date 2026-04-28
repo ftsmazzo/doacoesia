@@ -1,0 +1,26 @@
+{
+  "name": "doacoesia",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Plataforma de gestão de doações socioassistenciais",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:frontend": "npm run dev --workspace frontend",
+    "dev:backend": "npm run start:dev --workspace backend",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ftsmazzo/doacoesia.git"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ftsmazzo/doacoesia/issues"
+  },
+  "homepage": "https://github.com/ftsmazzo/doacoesia#readme"
+}
