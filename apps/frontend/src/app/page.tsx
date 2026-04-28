@@ -36,8 +36,22 @@ const statusOptions = ["ALL", "DRAFT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", 
 type StatusFilter = (typeof statusOptions)[number];
 
 function getApiBase() {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
-  return apiUrl.endsWith("/api") ? apiUrl : `${apiUrl}/api`;
+  return "/api";
+}
+
+async function getErrorMessage(response: Response, fallback: string) {
+  try {
+    const payload = (await response.json()) as { message?: string | string[] };
+    if (Array.isArray(payload.message)) {
+      return payload.message.join(" | ");
+    }
+    if (typeof payload.message === "string") {
+      return payload.message;
+    }
+  } catch {
+    // noop
+  }
+  return `${fallback} (HTTP ${response.status})`;
 }
 
 export default function Home() {
@@ -68,7 +82,9 @@ export default function Home() {
 
   const fetchDonors = useCallback(async () => {
     const response = await fetch(`${apiBase}/donors`, { cache: "no-store" });
-    if (!response.ok) throw new Error("Falha ao carregar doadores.");
+    if (!response.ok) {
+      throw new Error(await getErrorMessage(response, "Falha ao carregar doadores."));
+    }
     const data = (await response.json()) as Donor[];
     setDonors(data);
     if (!donationForm.donorId && data[0]) {
@@ -87,7 +103,9 @@ export default function Home() {
     const response = await fetch(`${apiBase}/donations?${query.toString()}`, {
       cache: "no-store",
     });
-    if (!response.ok) throw new Error("Falha ao carregar doações.");
+    if (!response.ok) {
+      throw new Error(await getErrorMessage(response, "Falha ao carregar doações."));
+    }
     const payload = (await response.json()) as DonationListResponse;
     setDonations(payload.data);
     setMeta(payload.meta);
@@ -121,7 +139,9 @@ export default function Home() {
           phone: donorForm.phone || undefined,
         }),
       });
-      if (!response.ok) throw new Error("Não foi possível salvar o doador.");
+      if (!response.ok) {
+        throw new Error(await getErrorMessage(response, "Não foi possível salvar o doador."));
+      }
       setDonorForm({ donorType: "PJ", name: "", document: "", email: "", phone: "" });
       await fetchDonors();
       setMessage("Doador cadastrado com sucesso.");
@@ -149,7 +169,9 @@ export default function Home() {
           status: donationForm.status,
         }),
       });
-      if (!response.ok) throw new Error("Não foi possível cadastrar a doação.");
+      if (!response.ok) {
+        throw new Error(await getErrorMessage(response, "Não foi possível cadastrar a doação."));
+      }
       setDonationForm((prev) => ({
         ...prev,
         title: "",
