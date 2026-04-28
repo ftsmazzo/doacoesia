@@ -16,6 +16,15 @@ import { DonationsService } from './donations.service';
 type DonationWithDonor = Prisma.DonationGetPayload<{
   include: { donor: true };
 }>;
+type DonationListResponse = {
+  data: DonationWithDonor[];
+  meta: {
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  };
+};
 
 @Controller('donations')
 export class DonationsController {
@@ -27,7 +36,9 @@ export class DonationsController {
   }
 
   @Get()
-  findAll(@Query() query: ListDonationsQueryDto): Promise<DonationWithDonor[]> {
+  findAll(
+    @Query() query: ListDonationsQueryDto,
+  ): Promise<DonationListResponse> {
     return this.donationsService.findAll(query);
   }
 

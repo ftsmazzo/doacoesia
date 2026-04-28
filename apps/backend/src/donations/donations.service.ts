@@ -8,6 +8,15 @@ import { UpdateDonationStatusDto } from './dto/update-donation-status.dto';
 type DonationWithDonor = Prisma.DonationGetPayload<{
   include: { donor: true };
 }>;
+type DonationListResponse = {
+  data: DonationWithDonor[];
+  meta: {
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  };
+};
 
 @Injectable()
 export class DonationsService {
@@ -20,15 +29,34 @@ export class DonationsService {
     });
   }
 
-  findAll(query: ListDonationsQueryDto): Promise<DonationWithDonor[]> {
-    return this.prisma.donation.findMany({
-      where: {
-        status: query.status,
-        targetAxis: query.targetAxis,
+  async findAll(query: ListDonationsQueryDto): Promise<DonationListResponse> {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 10;
+    const where: Prisma.DonationWhereInput = {
+      status: query.status,
+      targetAxis: query.targetAxis,
+    };
+
+    const [total, data] = await this.prisma.$transaction([
+      this.prisma.donation.count({ where }),
+      this.prisma.donation.findMany({
+        where,
+        include: { donor: true },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.max(1, Math.ceil(total / pageSize)),
       },
-      include: { donor: true },
-      orderBy: { createdAt: 'desc' },
-    });
+    };
   }
 
   async findOne(id: string): Promise<DonationWithDonor> {
