@@ -8,22 +8,28 @@ export class MinioService implements OnModuleInit {
   private readonly client: Client;
 
   constructor() {
-    const endpoint = process.env.MINIO_ENDPOINT;
-    const port = Number(process.env.MINIO_PORT ?? 9000);
-    const useSSL = process.env.MINIO_USE_SSL === 'true';
+    const endpointInput = process.env.MINIO_ENDPOINT;
+    const configuredPort = Number(process.env.MINIO_PORT ?? 9000);
+    const configuredUseSSL = process.env.MINIO_USE_SSL === 'true';
     const accessKey = process.env.MINIO_ACCESS_KEY;
     const secretKey = process.env.MINIO_SECRET_KEY;
 
-    if (!endpoint || !accessKey || !secretKey) {
+    if (!endpointInput || !accessKey || !secretKey) {
       throw new Error(
         'Variaveis MINIO_ENDPOINT, MINIO_ACCESS_KEY e MINIO_SECRET_KEY sao obrigatorias.',
       );
     }
 
+    const normalized = this.normalizeEndpoint(
+      endpointInput,
+      configuredPort,
+      configuredUseSSL,
+    );
+
     this.client = new Client({
-      endPoint: endpoint,
-      port,
-      useSSL,
+      endPoint: normalized.endPoint,
+      port: normalized.port,
+      useSSL: normalized.useSSL,
       accessKey,
       secretKey,
     });
@@ -60,5 +66,30 @@ export class MinioService implements OnModuleInit {
       await this.client.makeBucket(this.bucket, region);
       this.logger.log(`Bucket ${this.bucket} criado automaticamente.`);
     }
+  }
+
+  private normalizeEndpoint(
+    endpointInput: string,
+    fallbackPort: number,
+    fallbackUseSSL: boolean,
+  ) {
+    const hasProtocol =
+      endpointInput.startsWith('http://') ||
+      endpointInput.startsWith('https://');
+
+    if (!hasProtocol) {
+      return {
+        endPoint: endpointInput,
+        port: fallbackPort,
+        useSSL: fallbackUseSSL,
+      };
+    }
+
+    const parsed = new URL(endpointInput);
+    return {
+      endPoint: parsed.hostname,
+      port: parsed.port ? Number(parsed.port) : fallbackPort,
+      useSSL: parsed.protocol === 'https:' ? true : fallbackUseSSL,
+    };
   }
 }
