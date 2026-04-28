@@ -14,23 +14,17 @@ export class MinioService implements OnModuleInit {
   private isAvailable = false;
 
   constructor() {
-    const endpointInput = process.env.MINIO_ENDPOINT;
-    const configuredPort = Number(process.env.MINIO_PORT ?? 9000);
-    const configuredUseSSL = process.env.MINIO_USE_SSL === 'true';
-    const accessKey = process.env.MINIO_ACCESS_KEY;
-    const secretKey = process.env.MINIO_SECRET_KEY;
+    const serverUrl = process.env.MINIO_SERVER_URL;
+    const accessKey = process.env.MINIO_ROOT_USER;
+    const secretKey = process.env.MINIO_ROOT_PASSWORD;
 
-    if (!endpointInput || !accessKey || !secretKey) {
+    if (!serverUrl || !accessKey || !secretKey) {
       throw new Error(
-        'Variaveis MINIO_ENDPOINT, MINIO_ACCESS_KEY e MINIO_SECRET_KEY sao obrigatorias.',
+        'Variaveis MINIO_SERVER_URL, MINIO_ROOT_USER e MINIO_ROOT_PASSWORD sao obrigatorias.',
       );
     }
 
-    const normalized = this.normalizeEndpoint(
-      endpointInput,
-      configuredPort,
-      configuredUseSSL,
-    );
+    const normalized = this.normalizeEndpoint(serverUrl);
 
     this.client = new Client({
       endPoint: normalized.endPoint,
@@ -87,28 +81,20 @@ export class MinioService implements OnModuleInit {
     }
   }
 
-  private normalizeEndpoint(
-    endpointInput: string,
-    fallbackPort: number,
-    fallbackUseSSL: boolean,
-  ) {
-    const hasProtocol =
-      endpointInput.startsWith('http://') ||
-      endpointInput.startsWith('https://');
-
-    if (!hasProtocol) {
-      return {
-        endPoint: endpointInput,
-        port: fallbackPort,
-        useSSL: fallbackUseSSL,
-      };
-    }
-
-    const parsed = new URL(endpointInput);
+  private normalizeEndpoint(serverUrl: string) {
+    const normalizedInput =
+      serverUrl.startsWith('http://') || serverUrl.startsWith('https://')
+        ? serverUrl
+        : `http://${serverUrl}`;
+    const parsed = new URL(normalizedInput);
     return {
       endPoint: parsed.hostname,
-      port: parsed.port ? Number(parsed.port) : fallbackPort,
-      useSSL: parsed.protocol === 'https:' ? true : fallbackUseSSL,
+      port: parsed.port
+        ? Number(parsed.port)
+        : parsed.protocol === 'https:'
+          ? 443
+          : 9000,
+      useSSL: parsed.protocol === 'https:',
     };
   }
 
