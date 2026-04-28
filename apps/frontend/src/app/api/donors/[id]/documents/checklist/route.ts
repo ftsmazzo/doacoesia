@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getBackendApiBase } from "../../../../../_lib/backend";
+import { getBackendApiBase } from "../../../../_lib/backend";
 
 type Params = { params: Promise<{ id: string }> };
 
