@@ -21,6 +21,15 @@ enum DonationStatus {
   COMPLETED
 }
 
+enum DonorDocumentType {
+  FICHA_INSCRICAO_ANEXO_I
+  DOCUMENTO_IDENTIFICACAO
+}
+
+enum DonationDocumentType {
+  PROPOSTA_DETALHADA
+}
+
 model Donor {
   id           String     @id @default(cuid())
   donorType    String
@@ -31,6 +40,7 @@ model Donor {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   donations    Donation[]
+  documents    DonorDocument[]
 }
 
 model Donation {
@@ -52,10 +62,27 @@ model DonationDocument {
   donationId   String
   donation     Donation @relation(fields: [donationId], references: [id], onDelete: Cascade)
   fileName     String
+  documentType DonationDocumentType @default(PROPOSTA_DETALHADA)
   contentType  String
   sizeBytes    Int
   objectKey    String   @unique
   createdAt    DateTime @default(now())
 
   @@index([donationId])
+  @@unique([donationId, documentType])
+}
+
+model DonorDocument {
+  id           String            @id @default(cuid())
+  donorId      String
+  donor        Donor             @relation(fields: [donorId], references: [id], onDelete: Cascade)
+  fileName     String
+  documentType DonorDocumentType
+  contentType  String
+  sizeBytes    Int
+  objectKey    String            @unique
+  createdAt    DateTime          @default(now())
+
+  @@index([donorId])
+  @@unique([donorId, documentType])
 }

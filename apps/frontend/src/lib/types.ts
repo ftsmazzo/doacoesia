@@ -34,11 +34,35 @@ export type DonationListResponse = {
 export type DonationDocument = {
   id: string;
   donationId: string;
+  documentType: "PROPOSTA_DETALHADA";
   fileName: string;
   contentType: string;
   sizeBytes: number;
   objectKey: string;
   createdAt: string;
+};
+
+export type DonorDocumentType =
+  | "FICHA_INSCRICAO_ANEXO_I"
+  | "DOCUMENTO_IDENTIFICACAO";
+
+export type DonorDocument = {
+  id: string;
+  donorId: string;
+  documentType: DonorDocumentType;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  objectKey: string;
+  createdAt: string;
+};
+
+export type DonorChecklist = {
+  donorId: string;
+  required: DonorDocumentType[];
+  uploaded: DonorDocumentType[];
+  pending: DonorDocumentType[];
+  completed: boolean;
 };
 
 export type DashboardSummary = {

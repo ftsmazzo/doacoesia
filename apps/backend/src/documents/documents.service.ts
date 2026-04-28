@@ -1,14 +1,20 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
   PayloadTooLargeException,
 } from '@nestjs/common';
+import { DonorDocumentType } from '@prisma/client';
 import { MinioService } from '../storage/minio.service';
 import { PrismaService } from '../prisma.service';
 
 @Injectable()
 export class DocumentsService {
   private readonly maxFileSizeBytes = 15 * 1024 * 1024;
+  private readonly requiredDonorTypes: DonorDocumentType[] = [
+    'FICHA_INSCRICAO_ANEXO_I',
+    'DOCUMENTO_IDENTIFICACAO',
+  ];
 
   constructor(
     private readonly prisma: PrismaService,
@@ -27,9 +33,22 @@ export class DocumentsService {
       file.originalname,
     );
 
-    return this.prisma.donationDocument.create({
-      data: {
+    return this.prisma.donationDocument.upsert({
+      where: {
+        donationId_documentType: {
+          donationId,
+          documentType: 'PROPOSTA_DETALHADA',
+        },
+      },
+      create: {
         donationId,
+        fileName: file.originalname,
+        documentType: 'PROPOSTA_DETALHADA',
+        contentType: file.mimetype,
+        sizeBytes: file.size,
+        objectKey,
+      },
+      update: {
         fileName: file.originalname,
         contentType: file.mimetype,
         sizeBytes: file.size,
@@ -45,10 +64,88 @@ export class DocumentsService {
     });
   }
 
-  async getAccessUrl(documentId: string) {
-    const document = await this.prisma.donationDocument.findUnique({
-      where: { id: documentId },
+  async uploadForDonor(
+    donorId: string,
+    type: DonorDocumentType,
+    file: Express.Multer.File,
+  ) {
+    await this.ensureDonorExists(donorId);
+    this.validateFile(file);
+
+    if (!this.requiredDonorTypes.includes(type)) {
+      throw new BadRequestException('Tipo de documento do doador invalido.');
+    }
+
+    const objectKey = this.buildObjectKey(
+      `donors/${donorId}`,
+      file.originalname,
+    );
+    await this.minio.putObject(
+      objectKey,
+      file.buffer,
+      file.mimetype,
+      file.originalname,
+    );
+
+    return this.prisma.donorDocument.upsert({
+      where: {
+        donorId_documentType: {
+          donorId,
+          documentType: type,
+        },
+      },
+      create: {
+        donorId,
+        fileName: file.originalname,
+        documentType: type,
+        contentType: file.mimetype,
+        sizeBytes: file.size,
+        objectKey,
+      },
+      update: {
+        fileName: file.originalname,
+        contentType: file.mimetype,
+        sizeBytes: file.size,
+        objectKey,
+      },
     });
+  }
+
+  listByDonor(donorId: string) {
+    return this.prisma.donorDocument.findMany({
+      where: { donorId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async donorChecklist(donorId: string) {
+    await this.ensureDonorExists(donorId);
+    const docs = await this.prisma.donorDocument.findMany({
+      where: { donorId },
+      select: { documentType: true },
+    });
+    const uploadedTypes = new Set(docs.map((d) => d.documentType));
+    return {
+      donorId,
+      required: this.requiredDonorTypes,
+      uploaded: [...uploadedTypes],
+      pending: this.requiredDonorTypes.filter(
+        (type) => !uploadedTypes.has(type),
+      ),
+      completed: this.requiredDonorTypes.every((type) =>
+        uploadedTypes.has(type),
+      ),
+    };
+  }
+
+  async getAccessUrl(documentId: string) {
+    const document =
+      (await this.prisma.donationDocument.findUnique({
+        where: { id: documentId },
+      })) ??
+      (await this.prisma.donorDocument.findUnique({
+        where: { id: documentId },
+      }));
     if (!document) {
       throw new NotFoundException('Documento nao encontrado.');
     }
@@ -72,6 +169,16 @@ export class DocumentsService {
     }
   }
 
+  private async ensureDonorExists(donorId: string) {
+    const donor = await this.prisma.donor.findUnique({
+      where: { id: donorId },
+      select: { id: true },
+    });
+    if (!donor) {
+      throw new NotFoundException('Doador nao encontrado.');
+    }
+  }
+
   private validateFile(file?: Express.Multer.File) {
     if (!file) {
       throw new NotFoundException('Arquivo nao enviado.');
@@ -83,12 +190,12 @@ export class DocumentsService {
     }
   }
 
-  private buildObjectKey(donationId: string, fileName: string) {
+  private buildObjectKey(prefix: string, fileName: string) {
     const safeName = fileName
       .toLowerCase()
       .replace(/[^a-z0-9.\-_]/g, '-')
       .replace(/-+/g, '-');
 
-    return `donations/${donationId}/${Date.now()}-${safeName}`;
+    return `${prefix}/${Date.now()}-${safeName}`;
   }
 }

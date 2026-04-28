@@ -6,7 +6,13 @@ import { useParams } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { donationStatusLabels } from "@/lib/constants";
 import { getErrorMessage } from "@/lib/http";
-import type { Donation, DonationDocument, DonationStatus } from "@/lib/types";
+import type {
+  Donation,
+  DonationDocument,
+  DonorChecklist,
+  DonorDocumentType,
+  DonationStatus,
+} from "@/lib/types";
 
 function getApiBase() {
   return "/api";
@@ -20,16 +26,26 @@ export default function DonationDetailPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [donation, setDonation] = useState<Donation | null>(null);
   const [documents, setDocuments] = useState<DonationDocument[]>([]);
+  const [donorChecklist, setDonorChecklist] = useState<DonorChecklist | null>(null);
+
+  const donorDocLabels: Record<DonorDocumentType, string> = {
+    FICHA_INSCRICAO_ANEXO_I: "Ficha de Inscricao (Anexo I)",
+    DOCUMENTO_IDENTIFICACAO: "Documento de Identificacao",
+  };
 
   const load = useCallback(async () => {
-    const [donationRes, docsRes] = await Promise.all([
-      fetch(`${apiBase}/donations/${donationId}`, { cache: "no-store" }),
-      fetch(`${apiBase}/donations/${donationId}/documents`, { cache: "no-store" }),
-    ]);
+    const donationRes = await fetch(`${apiBase}/donations/${donationId}`, { cache: "no-store" });
     if (!donationRes.ok) throw new Error(await getErrorMessage(donationRes, "Falha ao carregar doação."));
-    if (!docsRes.ok) throw new Error(await getErrorMessage(docsRes, "Falha ao carregar documentos."));
-    setDonation((await donationRes.json()) as Donation);
+    const donationPayload = (await donationRes.json()) as Donation;
+    const [docsRes, checklistRes] = await Promise.all([
+      fetch(`${apiBase}/donations/${donationId}/documents`, { cache: "no-store" }),
+      fetch(`${apiBase}/donors/${donationPayload.donor.id}/documents/checklist`, { cache: "no-store" }),
+    ]);
+    if (!docsRes.ok) throw new Error(await getErrorMessage(docsRes, "Falha ao carregar documentos da doacao."));
+    if (!checklistRes.ok) throw new Error(await getErrorMessage(checklistRes, "Falha ao carregar checklist do doador."));
+    setDonation(donationPayload);
     setDocuments((await docsRes.json()) as DonationDocument[]);
+    setDonorChecklist((await checklistRes.json()) as DonorChecklist);
   }, [apiBase, donationId]);
 
   useEffect(() => {
@@ -64,6 +80,38 @@ export default function DonationDetailPage() {
     }
     const payload = (await response.json()) as { url: string };
     window.open(payload.url, "_blank", "noopener,noreferrer");
+  }
+
+  async function uploadDonorDocument(type: DonorDocumentType, file: File | null) {
+    if (!donation || !file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await fetch(`${apiBase}/donors/${donation.donor.id}/documents?type=${type}`, {
+      method: "POST",
+      body: formData,
+    });
+    if (!response.ok) {
+      setError(await getErrorMessage(response, "Falha ao reenviar documento do doador."));
+      return;
+    }
+    setMessage("Documento do doador reenviado.");
+    await load();
+  }
+
+  async function uploadProposal(file: File | null) {
+    if (!donation || !file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await fetch(`${apiBase}/donations/${donation.id}/documents`, {
+      method: "POST",
+      body: formData,
+    });
+    if (!response.ok) {
+      setError(await getErrorMessage(response, "Falha ao reenviar proposta."));
+      return;
+    }
+    setMessage("Proposta reenviada.");
+    await load();
   }
 
   return (
@@ -102,7 +150,47 @@ export default function DonationDetailPage() {
           </section>
 
           <section className="rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-5">
-            <h3 className="text-base font-semibold text-white">Documentos anexados</h3>
+            <h3 className="text-base font-semibold text-white">Checklist documental</h3>
+            <div className="mt-3 grid gap-2">
+              {(Object.keys(donorDocLabels) as DonorDocumentType[]).map((type) => {
+                const ok = donorChecklist?.uploaded.includes(type) ?? false;
+                return (
+                  <form
+                    key={type}
+                    className="rounded-lg border border-slate-800 bg-slate-800/50 px-3 py-2"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const input = e.currentTarget.querySelector<HTMLInputElement>("input[type=file]");
+                      void uploadDonorDocument(type, input?.files?.[0] ?? null);
+                    }}
+                  >
+                    <p className="text-sm text-slate-200">{donorDocLabels[type]} - {ok ? "Enviado" : "Pendente"}</p>
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                      <input type="file" className="w-full rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
+                      <button type="submit" className="rounded-md bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white">Reenviar</button>
+                    </div>
+                  </form>
+                );
+              })}
+            </div>
+            <div className="mt-4 rounded-lg border border-slate-800 bg-slate-800/50 px-3 py-2">
+              <p className="text-sm text-slate-200">Proposta detalhada (Doacao)</p>
+              <p className={`text-xs ${(documents[0] ? "text-emerald-300" : "text-amber-300")}`}>
+                {documents[0] ? "Enviada" : "Pendente"}
+              </p>
+              <form
+                className="mt-2 flex flex-col gap-2 sm:flex-row"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const input = e.currentTarget.querySelector<HTMLInputElement>("input[type=file]");
+                  void uploadProposal(input?.files?.[0] ?? null);
+                }}
+              >
+                <input type="file" className="w-full rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-100" />
+                <button type="submit" className="rounded-md bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white">Reenviar proposta</button>
+              </form>
+            </div>
+            <h4 className="mt-4 text-sm font-semibold text-white">Arquivos da proposta</h4>
             <div className="mt-3 grid gap-2">
               {documents.map((doc) => (
                 <div key={doc.id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-800/50 px-3 py-2">
