@@ -17,6 +17,33 @@ type DonationListResponse = {
     totalPages: number;
   };
 };
+type DashboardStatusSummary = {
+  received: number;
+  underReview: number;
+  approved: number;
+  rejected: number;
+};
+type AxisDashboardSummaryRow = {
+  axis: string;
+  received: number;
+  underReview: number;
+  approved: number;
+  rejected: number;
+};
+type DonationsDashboardSummary = {
+  status: DashboardStatusSummary;
+  axis: AxisDashboardSummaryRow[];
+};
+
+const dashboardAxis = [
+  'Crianças e Adolescentes',
+  'Pessoa Idosa',
+  'Pessoas com Deficiência',
+  'Pessoas em Situação de Rua',
+  'Mulheres em Situação de Violência',
+  'Jovens em processo de saída das ruas',
+  'Calamidade Pública e Emergências',
+] as const;
 
 @Injectable()
 export class DonationsService {
@@ -27,6 +54,75 @@ export class DonationsService {
       data: dto,
       include: { donor: true },
     });
+  }
+
+  async getDashboardSummary(): Promise<DonationsDashboardSummary> {
+    const [received, underReview, approved, rejected, axisStatusRows] =
+      await this.prisma.$transaction([
+        this.prisma.donation.count({
+          where: { status: { not: 'DRAFT' } },
+        }),
+        this.prisma.donation.count({
+          where: { status: 'UNDER_REVIEW' },
+        }),
+        this.prisma.donation.count({
+          where: { status: 'APPROVED' },
+        }),
+        this.prisma.donation.count({
+          where: { status: 'REJECTED' },
+        }),
+        this.prisma.donation.findMany({
+          select: {
+            targetAxis: true,
+            status: true,
+          },
+          where: {
+            targetAxis: { in: [...dashboardAxis] },
+          },
+        }),
+      ]);
+
+    const axisMap = new Map<string, AxisDashboardSummaryRow>(
+      dashboardAxis.map((axis) => [
+        axis,
+        {
+          axis,
+          received: 0,
+          underReview: 0,
+          approved: 0,
+          rejected: 0,
+        },
+      ]),
+    );
+
+    for (const row of axisStatusRows) {
+      const line = axisMap.get(row.targetAxis);
+      if (!line) continue;
+
+      const count = 1;
+      if (row.status !== 'DRAFT') {
+        line.received += count;
+      }
+      if (row.status === 'UNDER_REVIEW') {
+        line.underReview += count;
+      }
+      if (row.status === 'APPROVED') {
+        line.approved += count;
+      }
+      if (row.status === 'REJECTED') {
+        line.rejected += count;
+      }
+    }
+
+    return {
+      status: {
+        received,
+        underReview,
+        approved,
+        rejected,
+      },
+      axis: [...axisMap.values()],
+    };
   }
 
   async findAll(query: ListDonationsQueryDto): Promise<DonationListResponse> {

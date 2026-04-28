@@ -25,6 +25,21 @@ type DonationListResponse = {
     totalPages: number;
   };
 };
+type DonationsDashboardSummary = {
+  status: {
+    received: number;
+    underReview: number;
+    approved: number;
+    rejected: number;
+  };
+  axis: Array<{
+    axis: string;
+    received: number;
+    underReview: number;
+    approved: number;
+    rejected: number;
+  }>;
+};
 
 @Controller('donations')
 export class DonationsController {
@@ -40,6 +55,11 @@ export class DonationsController {
     @Query() query: ListDonationsQueryDto,
   ): Promise<DonationListResponse> {
     return this.donationsService.findAll(query);
+  }
+
+  @Get('dashboard/summary')
+  getDashboardSummary(): Promise<DonationsDashboardSummary> {
+    return this.donationsService.getDashboardSummary();
   }
 
   @Get(':id')

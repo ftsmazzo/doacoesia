@@ -21,6 +21,21 @@ type DonationListResponse = {
   data: Donation[];
   meta: { total: number; page: number; pageSize: number; totalPages: number };
 };
+type DashboardSummary = {
+  status: {
+    received: number;
+    underReview: number;
+    approved: number;
+    rejected: number;
+  };
+  axis: Array<{
+    axis: string;
+    received: number;
+    underReview: number;
+    approved: number;
+    rejected: number;
+  }>;
+};
 
 const axisOptions = [
   "Crianças e Adolescentes",
@@ -64,6 +79,16 @@ export default function Home() {
   const [meta, setMeta] = useState({ total: 0, page: 1, pageSize: 10, totalPages: 1 });
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [axisFilter, setAxisFilter] = useState("");
+  const [dashboardSummary, setDashboardSummary] = useState<DashboardSummary>({
+    status: { received: 0, underReview: 0, approved: 0, rejected: 0 },
+    axis: axisOptions.map((axis) => ({
+      axis,
+      received: 0,
+      underReview: 0,
+      approved: 0,
+      rejected: 0,
+    })),
+  });
   const [donorForm, setDonorForm] = useState({
     donorType: "PJ",
     name: "",
@@ -111,12 +136,27 @@ export default function Home() {
     setMeta(payload.meta);
   }, [apiBase, axisFilter, meta.pageSize, statusFilter]);
 
+  const fetchDashboardSummary = useCallback(async () => {
+    const response = await fetch(`${apiBase}/donations/dashboard/summary`, {
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      throw new Error(await getErrorMessage(response, "Falha ao carregar dashboard."));
+    }
+    const payload = (await response.json()) as DashboardSummary;
+    setDashboardSummary(payload);
+  }, [apiBase]);
+
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       setError(null);
       try {
-        await Promise.all([fetchDonors(), fetchDonations(1)]);
+        await Promise.all([
+          fetchDonors(),
+          fetchDonations(1),
+          fetchDashboardSummary(),
+        ]);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Erro ao carregar dados.");
       } finally {
@@ -124,7 +164,7 @@ export default function Home() {
       }
     };
     void load();
-  }, [fetchDonations, fetchDonors]);
+  }, [fetchDashboardSummary, fetchDonations, fetchDonors]);
 
   async function onDonorSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -144,6 +184,7 @@ export default function Home() {
       }
       setDonorForm({ donorType: "PJ", name: "", document: "", email: "", phone: "" });
       await fetchDonors();
+      await fetchDashboardSummary();
       setMessage("Doador cadastrado com sucesso.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao cadastrar doador.");
@@ -178,7 +219,7 @@ export default function Home() {
         description: "",
         proposedQuantity: "",
       }));
-      await fetchDonations(1);
+      await Promise.all([fetchDonations(1), fetchDashboardSummary()]);
       setMessage("Doação cadastrada com sucesso.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao cadastrar doação.");
@@ -248,25 +289,61 @@ export default function Home() {
           </p>
         </section>
 
-        <section id="dashboard" className="grid gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <section id="dashboard" className="grid gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-4">
           <article className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
             <h2 className="text-sm font-semibold text-white">Resumo operacional</h2>
-            <p className="mt-3 text-sm text-slate-300">{meta.total} propostas recebidas</p>
-            <p className="text-sm text-slate-300">{donors.length} doadores cadastrados</p>
-            <p className="text-sm text-slate-300">Página {meta.page} de {meta.totalPages}</p>
-          </article>
-          <article className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
-            <h2 className="text-sm font-semibold text-white">Eixo prioritário</h2>
-            <p className="mt-3 text-sm text-slate-300">Pessoas idosas</p>
-            <p className="text-sm text-slate-300">Maior demanda por mobilidade e acessibilidade.</p>
-          </article>
-          <article className="rounded-2xl border border-slate-800 bg-slate-900 p-4 md:col-span-2 xl:col-span-1">
-            <h2 className="text-sm font-semibold text-white">Status da API</h2>
             <p className="mt-3 text-sm text-slate-300">
-              Endpoint de saúde disponível em{" "}
-              <code className="rounded bg-slate-800 px-1 py-0.5 text-cyan-300">/api/health</code>.
+              {dashboardSummary.status.received} propostas recebidas
             </p>
           </article>
+          <article className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+            <h2 className="text-sm font-semibold text-white">Em análise</h2>
+            <p className="mt-3 text-sm text-slate-300">
+              {dashboardSummary.status.underReview} propostas em análise
+            </p>
+          </article>
+          <article className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+            <h2 className="text-sm font-semibold text-white">Aprovadas</h2>
+            <p className="mt-3 text-sm text-slate-300">
+              {dashboardSummary.status.approved} propostas aprovadas
+            </p>
+          </article>
+          <article className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+            <h2 className="text-sm font-semibold text-white">Rejeitadas</h2>
+            <p className="mt-3 text-sm text-slate-300">
+              {dashboardSummary.status.rejected} propostas rejeitadas
+            </p>
+          </article>
+        </section>
+
+        <section className="rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-5">
+          <h2 className="text-base font-semibold text-white">
+            Status por eixo de atendimento
+          </h2>
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full min-w-[760px] border-collapse text-sm">
+              <thead>
+                <tr className="text-left text-slate-400">
+                  <th className="border-b border-slate-800 px-3 py-2 font-medium">Eixo</th>
+                  <th className="border-b border-slate-800 px-3 py-2 font-medium">Recebidas</th>
+                  <th className="border-b border-slate-800 px-3 py-2 font-medium">Em análise</th>
+                  <th className="border-b border-slate-800 px-3 py-2 font-medium">Aprovadas</th>
+                  <th className="border-b border-slate-800 px-3 py-2 font-medium">Rejeitadas</th>
+                </tr>
+              </thead>
+              <tbody className="text-slate-200">
+                {dashboardSummary.axis.map((axisRow) => (
+                  <tr key={axisRow.axis}>
+                    <td className="border-b border-slate-800 px-3 py-2">{axisRow.axis}</td>
+                    <td className="border-b border-slate-800 px-3 py-2">{axisRow.received}</td>
+                    <td className="border-b border-slate-800 px-3 py-2">{axisRow.underReview}</td>
+                    <td className="border-b border-slate-800 px-3 py-2">{axisRow.approved}</td>
+                    <td className="border-b border-slate-800 px-3 py-2">{axisRow.rejected}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
 
         {error && <p className="rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
@@ -427,7 +504,7 @@ export default function Home() {
 
         <section id="doacoes" className="rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-base font-semibold text-white">Fila de doações</h2>
+            <h2 className="text-base font-semibold text-white">Últimas doações</h2>
             <div className="flex flex-wrap gap-2">
               <select
                 value={statusFilter}
