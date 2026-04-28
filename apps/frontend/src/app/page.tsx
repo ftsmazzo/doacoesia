@@ -1,33 +1,100 @@
 export default function Home() {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50">
-      <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col justify-center gap-8 px-4 py-10 sm:px-6">
-        <span className="w-fit rounded-full border border-cyan-500/40 bg-cyan-500/10 px-3 py-1 text-xs font-semibold tracking-wide text-cyan-300">
-          doacoesIA - MVP
-        </span>
-        <h1 className="text-3xl font-bold tracking-tight sm:text-5xl">
-          Plataforma inteligente para gestão de doações da assistência social
-        </h1>
-        <p className="max-w-2xl text-base text-slate-300 sm:text-lg">
-          Frontend mobile-first já preparado para operar com backend separado,
-          deploy em EasyPanel e migrações automáticas no startup.
-        </p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-            <h2 className="font-semibold text-cyan-300">Frontend</h2>
-            <p className="mt-1 text-sm text-slate-300">
-              Next.js 16 com estrutura responsiva para jornada do doador e
-              backoffice.
-            </p>
-          </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-            <h2 className="font-semibold text-cyan-300">Backend</h2>
-            <p className="mt-1 text-sm text-slate-300">
-              NestJS + Prisma com endpoint de saúde em{" "}
-              <code className="text-cyan-200">/api/health</code>.
-            </p>
-          </div>
+    <div className="app-shell">
+      <header className="topbar">
+        <div className="brand">
+          <span className="brand-badge">doacoesIA</span>
+          <strong>Gestão inteligente de doações</strong>
         </div>
+        <nav className="nav">
+          <a href="#dashboard">Dashboard</a>
+          <a href="#cadastro">Cadastro</a>
+          <a href="#doacoes">Doações</a>
+        </nav>
+      </header>
+
+      <main className="container">
+        <section className="hero">
+          <p className="eyebrow">MVP pronto para evolução</p>
+          <h1>Plataforma moderna, fluida e mobile-first para assistência social</h1>
+          <p>
+            Estrutura preparada para doador, comissão e gestão, com backend em
+            NestJS + Prisma e deploy automatizado em EasyPanel.
+          </p>
+        </section>
+
+        <section id="dashboard" className="grid cards-grid">
+          <article className="card">
+            <h2>Resumo operacional</h2>
+            <p>98 propostas recebidas</p>
+            <p>24 em análise</p>
+            <p>61 aprovadas</p>
+          </article>
+          <article className="card">
+            <h2>Eixo prioritário</h2>
+            <p>Pessoas idosas</p>
+            <p>Maior demanda por mobilidade e acessibilidade.</p>
+          </article>
+          <article className="card">
+            <h2>Status da API</h2>
+            <p>Endpoint de saúde disponível em <code>/api/health</code>.</p>
+          </article>
+        </section>
+
+        <section id="cadastro" className="card form-card">
+          <h2>Cadastro rápido de doador</h2>
+          <form className="form-grid">
+            <label>
+              Nome / Razão Social
+              <input type="text" placeholder="Ex.: Empresa Exemplo LTDA" />
+            </label>
+            <label>
+              CPF/CNPJ
+              <input type="text" placeholder="00.000.000/0001-00" />
+            </label>
+            <label>
+              E-mail
+              <input type="email" placeholder="contato@empresa.com" />
+            </label>
+            <label>
+              Telefone
+              <input type="tel" placeholder="(16) 99999-9999" />
+            </label>
+            <button type="button">Salvar cadastro</button>
+          </form>
+        </section>
+
+        <section id="doacoes" className="card">
+          <h2>Fila de doações</h2>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Título</th>
+                  <th>Eixo</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Kits de higiene</td>
+                  <td>Pessoas em situação de rua</td>
+                  <td><span className="pill pending">Em análise</span></td>
+                </tr>
+                <tr>
+                  <td>Cadeiras de rodas</td>
+                  <td>Pessoa idosa</td>
+                  <td><span className="pill approved">Aprovada</span></td>
+                </tr>
+                <tr>
+                  <td>Reforma de espaço</td>
+                  <td>Crianças e adolescentes</td>
+                  <td><span className="pill submitted">Enviada</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </main>
     </div>
   );
