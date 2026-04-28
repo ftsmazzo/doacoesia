@@ -30,6 +30,7 @@ export class MinioService implements OnModuleInit {
       endPoint: normalized.endPoint,
       port: normalized.port,
       useSSL: normalized.useSSL,
+      pathStyle: true,
       accessKey,
       secretKey,
     });
