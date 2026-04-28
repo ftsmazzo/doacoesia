@@ -1,7 +1,7 @@
 FROM node:22-slim AS deps
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm ci && npm install lightningcss --no-save
 
 FROM node:22-slim AS builder
 WORKDIR /app
