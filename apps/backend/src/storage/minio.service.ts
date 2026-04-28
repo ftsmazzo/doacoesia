@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { Client } from 'minio';
 
 @Injectable()
@@ -6,6 +11,7 @@ export class MinioService implements OnModuleInit {
   private readonly logger = new Logger(MinioService.name);
   private readonly bucket = process.env.MINIO_BUCKET ?? 'doacoes';
   private readonly client: Client;
+  private isAvailable = false;
 
   constructor() {
     const endpointInput = process.env.MINIO_ENDPOINT;
@@ -37,7 +43,17 @@ export class MinioService implements OnModuleInit {
   }
 
   async onModuleInit() {
-    await this.ensureBucket();
+    try {
+      await this.ensureBucket();
+      this.isAvailable = true;
+      this.logger.log('MinIO conectado com sucesso.');
+    } catch (error) {
+      this.isAvailable = false;
+      this.logger.error(
+        'MinIO indisponivel no startup. A API seguira ativa, mas endpoints de documentos retornarao erro ate o ajuste de configuracao.',
+        error instanceof Error ? error.message : String(error),
+      );
+    }
   }
 
   async putObject(
@@ -46,6 +62,7 @@ export class MinioService implements OnModuleInit {
     contentType: string,
     fileName: string,
   ) {
+    this.assertAvailable();
     await this.client.putObject(this.bucket, objectKey, buffer, buffer.length, {
       'Content-Type': contentType,
       'X-Amz-Meta-Original-File-Name': fileName,
@@ -53,6 +70,7 @@ export class MinioService implements OnModuleInit {
   }
 
   async getPresignedGetUrl(objectKey: string, expiresInSeconds = 900) {
+    this.assertAvailable();
     return this.client.presignedGetObject(
       this.bucket,
       objectKey,
@@ -92,5 +110,13 @@ export class MinioService implements OnModuleInit {
       port: parsed.port ? Number(parsed.port) : fallbackPort,
       useSSL: parsed.protocol === 'https:' ? true : fallbackUseSSL,
     };
+  }
+
+  private assertAvailable() {
+    if (!this.isAvailable) {
+      throw new ServiceUnavailableException(
+        'Armazenamento de documentos temporariamente indisponivel. Verifique configuracao do MinIO.',
+      );
+    }
   }
 }
